@@ -1,4 +1,6 @@
 using IssueTracker.Api.Models;
+using IssueTracker.Api.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -6,8 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<IssueService>();
 
 var app = builder.Build();
+
 
 List<Issue> issues = new List<Issue>();
 
@@ -36,16 +40,16 @@ app.MapGet("/api/health", () =>
 })
 .WithName("GetHeath");
 
-app.MapGet("/api/issues", () =>
-{
-    return Results.Ok(issues);
+app.MapGet("/api/issues", (IssueService issueService) =>
+{   
+    return Results.Ok(issueService.GetAllIssues());
 })
 .WithName("GetIssues");
 
 
-app.MapGet("/api/issues/{id}", (int id) =>
+app.MapGet("/api/issues/{id}", (int id, IssueService issueService) =>
 {   
-    var issue = issues.FirstOrDefault(issue => issue.Id == id);
+    var issue = issueService.GetIssueById(id);
 
     if(issue == null)
     {
@@ -55,51 +59,36 @@ app.MapGet("/api/issues/{id}", (int id) =>
 })
 .WithName("GetIssueByID");
 
-app.MapPost("/api/issues", (Issue issue) =>
+app.MapPost("/api/issues", (Issue issue, IssueService issueService) =>
 {   
-   var nexID = issues.Max(issue => issue.Id) + 1;
+   var createdIssue = issueService.CreateIssue(issue);
 
-   issue.Id = nexID;
-   issue.CreatedAt = DateTime.UtcNow;
-   issues.Add(issue);
-
-   return Results.Created($"/api/issues/{issue.Id}", issue);return Results.Created();
-
+   return Results.Created($"/api/issues/{createdIssue.Id}", createdIssue);
 })
-.WithName("PostNextID");
+.WithName("CreatedIssue");
 
-app.MapPut("/api/issues/{id}", (int id, Issue updatedIssue) =>
+
+app.MapPut("/api/issues/{id}", (int id, Issue updatedIssue, IssueService issueService) =>
 {   
-    var issue = issues.FirstOrDefault(issue => issue.Id == id);
-
-    if(issue == null)
+    var issue = issueService.UpdateIssue(id, updatedIssue);
+    if( issue == null)
     {
         return Results.NotFound();
     }
-    else
-    {
-        issue.Title = updatedIssue.Title;
-        issue.Description = updatedIssue.Description;
-        issue.Status = updatedIssue.Status;
-        issue.Priority = updatedIssue.Priority;
-    }
-    return Results.Ok(issue);
+    return Results.Ok(issue);  
 })
 .WithName("UpdateIssue");
 
-app.MapDelete("/api/issues/{id}", (int id) =>
+app.MapDelete("/api/issues/{id}", (int id, IssueService issueService) =>
 {   
-    var issue = issues.FirstOrDefault(issue => issue.Id == id);
-
-    if(issue == null)
+    var deleted = issueService.DeleteIssue(id);
+    
+    if(deleted == false)
     {
         return Results.NotFound();
+    
     }
-    else
-    {
-        issues.Remove(issue);
-    }
-    return Results.NoContent();
+        return Results.NoContent();
 })
 .WithName("DeleteIssueByID");
 
