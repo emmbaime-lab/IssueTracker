@@ -1,6 +1,9 @@
 using IssueTracker.Api.Models;
 using IssueTracker.Api.Services;
+using IssueTracker.Api.Dtos;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.VisualBasic;
+using Microsoft.AspNetCore.Components.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -59,23 +62,38 @@ app.MapGet("/api/issues/{id}", (int id, IssueService issueService) =>
 })
 .WithName("GetIssueByID");
 
-app.MapPost("/api/issues", (Issue issue, IssueService issueService) =>
-{   
-   var createdIssue = issueService.CreateIssue(issue);
+app.MapPost("/api/issues", (CreateIssueRequest request, IssueService issueService) =>
+{  
+    var issue = new Issue
+    { 
+        Title = request.Title,
+        Description = request.Description,
+        Status = request.Status,
+        Priority = request.Priority 
+    };
+    var createdIssue = issueService.CreateIssue(issue);
 
    return Results.Created($"/api/issues/{createdIssue.Id}", createdIssue);
 })
 .WithName("CreatedIssue");
 
 
-app.MapPut("/api/issues/{id}", (int id, Issue updatedIssue, IssueService issueService) =>
+app.MapPut("/api/issues/{id}", (int id, IssueService issueService, UpdateIssueRequest updateIssueRequest) =>
 {   
-    var issue = issueService.UpdateIssue(id, updatedIssue);
-    if( issue == null)
+    var issue = new Issue
+    
+    { Title = updateIssueRequest.Title,
+      Description = updateIssueRequest.Description,
+      Status = updateIssueRequest.Status,
+      Priority = updateIssueRequest.Priority   
+    };
+   
+    var updatedIssue = issueService.UpdateIssue(id, issue);
+    if( updatedIssue == null)
     {
         return Results.NotFound();
     }
-    return Results.Ok(issue);  
+    return Results.Ok(updatedIssue);  
 })
 .WithName("UpdateIssue");
 
