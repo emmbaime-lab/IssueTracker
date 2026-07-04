@@ -63,7 +63,21 @@ app.MapGet("/api/issues/{id}", (int id, IssueService issueService) =>
 .WithName("GetIssueByID");
 
 app.MapPost("/api/issues", (CreateIssueRequest request, IssueService issueService) =>
-{  
+{   
+    var allowPriorities = new[] {"Low", "Medium", "High"};
+
+    if (string.IsNullOrWhiteSpace(request.Title))
+    {
+       return Results.BadRequest("Title is required");
+    }
+
+    var priorityIsValid = allowPriorities.Any(priority => priority.Equals(request.Priority, StringComparison.OrdinalIgnoreCase));
+    
+    if ( !priorityIsValid )
+    {
+        return Results.BadRequest("Priority must be Low, Medium or High.");
+    }
+
     var issue = new Issue
     { 
         Title = request.Title,
@@ -74,7 +88,7 @@ app.MapPost("/api/issues", (CreateIssueRequest request, IssueService issueServic
     var createdIssue = issueService.CreateIssue(issue);
 
    return Results.Created($"/api/issues/{createdIssue.Id}", createdIssue);
-})
+})  
 .WithName("CreatedIssue");
 
 
